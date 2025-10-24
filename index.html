@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Normal Force on an Inclined Surface</title>
+    <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
+                'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
+                sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        .slider::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: #3B82F6;
+            cursor: pointer;
+            border-radius: 50%;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+        .slider::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: #3B82F6;
+            cursor: pointer;
+            border-radius: 50%;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState } = React;
+
+        const NormalForceAnimation = () => {
+            const [angle, setAngle] = useState(0);
+            const [scaleForce, setScaleForce] = useState(false);
+            const [showGravity, setShowGravity] = useState(false);
+
+            // Canvas dimensions
+            const width = 1200;
+            const height = 900;
+
+            // Constants
+            const horizontalRefY = height * 0.75; // 1/4 up from bottom
+            const horizontalRefLeftX = 300;
+            const horizontalRefRightX = 900;
+            const surfaceLength = 600;
+            const baseNormalForceLength = 225;
+            const crateSize = 60;
+
+            // Convert angle to radians
+            const angleRad = (angle * Math.PI) / 180;
+
+            // Calculate normal force length (scale by cos(theta) if enabled)
+            const normalForceLength = scaleForce 
+                ? baseNormalForceLength * Math.cos(angleRad)
+                : baseNormalForceLength;
+
+            // Vertex position (left end of inclined surface, attached to horizontal reference)
+            const vertexX = horizontalRefLeftX;
+            const vertexY = horizontalRefY;
+
+            // Right end of inclined surface (rotates around vertex)
+            const inclinedEndX = vertexX + surfaceLength * Math.cos(angleRad);
+            const inclinedEndY = vertexY - surfaceLength * Math.sin(angleRad);
+
+            // Midpoint of inclined surface (tail of normal force)
+            const midX = (vertexX + inclinedEndX) / 2;
+            const midY = (vertexY + inclinedEndY) / 2;
+
+            // Normal force vector (perpendicular to surface, pointing away)
+            const normalAngleRad = angleRad + Math.PI / 2; // Perpendicular to surface
+            const normalEndX = midX + normalForceLength * Math.cos(normalAngleRad);
+            const normalEndY = midY - normalForceLength * Math.sin(normalAngleRad);
+
+            // Crate position (centered at the midpoint where normal force originates)
+            const crateCenterX = midX + (crateSize / 2) * Math.cos(normalAngleRad);
+            const crateCenterY = midY - (crateSize / 2) * Math.sin(normalAngleRad);
+
+            // Reference lines (through tail of normal force)
+            const refLineLength = 300;
+            const verticalLineTop = midY - refLineLength;
+            const verticalLineBottom = midY + refLineLength;
+            const horizontalLineLeft = midX - refLineLength;
+            const horizontalLineRight = midX + refLineLength;
+
+            // Arc for inclination angle (at vertex)
+            const inclinationArcRadius = 131.25;
+            const inclinationArcPath = angle > 0
+                ? `M ${vertexX + inclinationArcRadius} ${vertexY} 
+                   A ${inclinationArcRadius} ${inclinationArcRadius} 0 0 0 
+                   ${vertexX + inclinationArcRadius * Math.cos(angleRad)} ${vertexY - inclinationArcRadius * Math.sin(angleRad)}`
+                : '';
+
+            // Arc for vertical angle (at normal force base)
+            const verticalArcRadius = 131.25;
+            const verticalArcPath = angle > 0
+                ? `M ${midX} ${midY - verticalArcRadius} 
+                   A ${verticalArcRadius} ${verticalArcRadius} 0 0 0 
+                   ${midX + verticalArcRadius * Math.cos(normalAngleRad)} ${midY - verticalArcRadius * Math.sin(normalAngleRad)}`
+                : '';
+
+            // Arrow head for normal force
+            const arrowSize = 12;
+            const arrowAngle = Math.PI / 6;
+            const arrow1X = normalEndX - arrowSize * Math.cos(normalAngleRad - arrowAngle);
+            const arrow1Y = normalEndY + arrowSize * Math.sin(normalAngleRad - arrowAngle);
+            const arrow2X = normalEndX - arrowSize * Math.cos(normalAngleRad + arrowAngle);
+            const arrow2Y = normalEndY + arrowSize * Math.sin(normalAngleRad + arrowAngle);
+
+            return (
+                <div className="flex flex-col items-center gap-6 p-8 bg-gray-50 min-h-screen">
+                    <h2 className="text-2xl font-bold text-gray-800">Normal Force on an Inclined Surface</h2>
+                    
+                    <svg width={width} height={height} className="bg-white border-2 border-gray-300 rounded-lg shadow-lg">
+                        {/* Horizontal reference surface (only visible when angle > 0) */}
+                        {angle > 0 && (
+                            <line
+                                x1={horizontalRefLeftX}
+                                y1={horizontalRefY}
+                                x2={horizontalRefRightX}
+                                y2={horizontalRefY}
+                                stroke="#888"
+                                strokeWidth="3"
+                            />
+                        )}
+
+                        {/* Inclined surface */}
+                        <line
+                            x1={vertexX}
+                            y1={vertexY}
+                            x2={inclinedEndX}
+                            y2={inclinedEndY}
+                            stroke="#333"
+                            strokeWidth="4"
+                        />
+
+                        {/* Crate on inclined surface */}
+                        <rect
+                            x={crateCenterX - crateSize / 2}
+                            y={crateCenterY - crateSize / 2}
+                            width={crateSize}
+                            height={crateSize}
+                            fill="#8B4513"
+                            stroke="#654321"
+                            strokeWidth="2"
+                            transform={`rotate(${-angle} ${crateCenterX} ${crateCenterY})`}
+                        />
+
+                        {/* Reference lines (faint dashed) */}
+                        <line
+                            x1={midX}
+                            y1={verticalLineTop}
+                            x2={midX}
+                            y2={verticalLineBottom}
+                            stroke="#CCC"
+                            strokeWidth="1"
+                            strokeDasharray="5,5"
+                        />
+                        <line
+                            x1={horizontalLineLeft}
+                            y1={midY}
+                            x2={horizontalLineRight}
+                            y2={midY}
+                            stroke="#CCC"
+                            strokeWidth="1"
+                            strokeDasharray="5,5"
+                        />
+
+                        {/* Faint green reference vector when scaling is enabled */}
+                        {scaleForce && angle > 0 && (
+                            <>
+                                <line
+                                    x1={midX}
+                                    y1={midY}
+                                    x2={midX + baseNormalForceLength * Math.cos(normalAngleRad)}
+                                    y2={midY - baseNormalForceLength * Math.sin(normalAngleRad)}
+                                    stroke="#22C55E"
+                                    strokeWidth="2"
+                                    strokeOpacity="0.3"
+                                    strokeDasharray="5,5"
+                                />
+                                {/* Arrow head for faint reference vector */}
+                                {(() => {
+                                    const refEndX = midX + baseNormalForceLength * Math.cos(normalAngleRad);
+                                    const refEndY = midY - baseNormalForceLength * Math.sin(normalAngleRad);
+                                    const refArrow1X = refEndX - arrowSize * Math.cos(normalAngleRad - arrowAngle);
+                                    const refArrow1Y = refEndY + arrowSize * Math.sin(normalAngleRad - arrowAngle);
+                                    const refArrow2X = refEndX - arrowSize * Math.cos(normalAngleRad + arrowAngle);
+                                    const refArrow2Y = refEndY + arrowSize * Math.sin(normalAngleRad + arrowAngle);
+                                    return (
+                                        <polygon
+                                            points={`${refEndX},${refEndY} ${refArrow1X},${refArrow1Y} ${refArrow2X},${refArrow2Y}`}
+                                            fill="#22C55E"
+                                            fillOpacity="0.3"
+                                        />
+                                    );
+                                })()}
+                            </>
+                        )}
+
+                        {/* Normal force vector */}
+                        <line
+                            x1={midX}
+                            y1={midY}
+                            x2={normalEndX}
+                            y2={normalEndY}
+                            stroke="#22C55E"
+                            strokeWidth="3"
+                        />
+                        {/* Arrow head */}
+                        <polygon
+                            points={`${normalEndX},${normalEndY} ${arrow1X},${arrow1Y} ${arrow2X},${arrow2Y}`}
+                            fill="#22C55E"
+                        />
+                        {/* Normal force label */}
+                        <text
+                            x={normalEndX + 15}
+                            y={normalEndY - 10}
+                            fill="#22C55E"
+                            fontSize="20"
+                            fontWeight="bold"
+                        >
+                            F<tspan dy="5" fontSize="14">N</tspan>
+                        </text>
+
+                        {/* Right angle annotation */}
+                        {(() => {
+                            const rightAngleSize = 20;
+                            const corner1X = midX + rightAngleSize * Math.cos(angleRad);
+                            const corner1Y = midY - rightAngleSize * Math.sin(angleRad);
+                            const corner2X = corner1X + rightAngleSize * Math.cos(normalAngleRad);
+                            const corner2Y = corner1Y - rightAngleSize * Math.sin(normalAngleRad);
+                            const corner3X = midX + rightAngleSize * Math.cos(normalAngleRad);
+                            const corner3Y = midY - rightAngleSize * Math.sin(normalAngleRad);
+                            
+                            return (
+                                <path
+                                    d={`M ${corner1X} ${corner1Y} L ${corner2X} ${corner2Y} L ${corner3X} ${corner3Y}`}
+                                    fill="none"
+                                    stroke="#F97316"
+                                    strokeWidth="2"
+                                />
+                            );
+                        })()}
+
+                        {/* Gravitational force vector (when enabled) */}
+                        {showGravity && (
+                            <>
+                                {/* Gravity vector line */}
+                                <line
+                                    x1={crateCenterX}
+                                    y1={crateCenterY}
+                                    x2={crateCenterX}
+                                    y2={crateCenterY + baseNormalForceLength}
+                                    stroke="#EF4444"
+                                    strokeWidth="3"
+                                />
+                                {/* Gravity arrow head */}
+                                <polygon
+                                    points={`${crateCenterX},${crateCenterY + baseNormalForceLength} ${crateCenterX - arrowSize * Math.sin(arrowAngle)},${crateCenterY + baseNormalForceLength - arrowSize * Math.cos(arrowAngle)} ${crateCenterX + arrowSize * Math.sin(arrowAngle)},${crateCenterY + baseNormalForceLength - arrowSize * Math.cos(arrowAngle)}`}
+                                    fill="#EF4444"
+                                />
+                                {/* Gravity force label */}
+                                <text
+                                    x={crateCenterX + 20}
+                                    y={crateCenterY + baseNormalForceLength / 2}
+                                    fill="#EF4444"
+                                    fontSize="20"
+                                    fontWeight="bold"
+                                >
+                                    F<tspan dy="5" fontSize="14">g</tspan>
+                                </text>
+                            </>
+                        )}
+
+                        {/* Inclination angle arc and label (only when angle > 0) */}
+                        {angle > 0 && (
+                            <>
+                                <path
+                                    d={inclinationArcPath}
+                                    fill="none"
+                                    stroke="#3B82F6"
+                                    strokeWidth="2"
+                                />
+                                <text
+                                    x={vertexX + inclinationArcRadius * 1.15 * Math.cos(angleRad / 2)}
+                                    y={vertexY - inclinationArcRadius * 1.15 * Math.sin(angleRad / 2) + 5}
+                                    fill="#3B82F6"
+                                    fontSize="16"
+                                    fontWeight="bold"
+                                >
+                                    {angle}°
+                                </text>
+                            </>
+                        )}
+
+                        {/* Vertical angle arc and label (only when angle > 0) */}
+                        {angle > 0 && (
+                            <>
+                                <path
+                                    d={verticalArcPath}
+                                    fill="none"
+                                    stroke="#3B82F6"
+                                    strokeWidth="2"
+                                />
+                                <text
+                                    x={midX + verticalArcRadius * 1.15 * Math.cos((Math.PI / 2 + normalAngleRad) / 2)}
+                                    y={midY - verticalArcRadius * 1.15 * Math.sin((Math.PI / 2 + normalAngleRad) / 2) + 5}
+                                    fill="#3B82F6"
+                                    fontSize="16"
+                                    fontWeight="bold"
+                                >
+                                    {angle}°
+                                </text>
+                            </>
+                        )}
+
+                        {/* Vertex indicator (small circle) */}
+                        {/* <circle cx={vertexX} cy={vertexY} r="4" fill="#666" /> */}
+                    </svg>
+
+                    {/* Slider control */}
+                    <div className="w-full max-w-md">
+                        <div className="flex justify-between items-center mb-2">
+                            <label className="text-lg font-semibold text-gray-700">Inclination Angle:</label>
+                            <span className="text-xl font-bold text-blue-600">{angle}°</span>
+                        </div>
+                        <input
+                            type="range"
+                            min="0"
+                            max="90"
+                            value={angle}
+                            onChange={(e) => setAngle(Number(e.target.value))}
+                            className="w-full h-3 bg-gray-200 rounded-lg appearance-none cursor-pointer slider"
+                        />
+                        <div className="flex justify-between text-sm text-gray-600 mt-1">
+                            <span>0°</span>
+                            <span>90°</span>
+                        </div>
+                    </div>
+
+                    {/* Checkbox for scaling normal force */}
+                    <div className="w-full max-w-md">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-lg border-2 border-gray-300 hover:border-blue-400 transition-colors">
+                            <input
+                                type="checkbox"
+                                checked={scaleForce}
+                                onChange={(e) => setScaleForce(e.target.checked)}
+                                className="w-5 h-5 cursor-pointer"
+                            />
+                            <span className="text-base font-medium text-gray-700">
+                                What happens to the magnitude of the Normal Force as the angle of incline changes?
+                            </span>
+                        </label>
+                    </div>
+
+                    {/* Checkbox for gravitational force */}
+                    <div className="w-full max-w-md">
+                        <label className="flex items-center gap-3 cursor-pointer p-3 bg-white rounded-lg border-2 border-gray-300 hover:border-red-400 transition-colors">
+                            <input
+                                type="checkbox"
+                                checked={showGravity}
+                                onChange={(e) => setShowGravity(e.target.checked)}
+                                className="w-5 h-5 cursor-pointer"
+                            />
+                            <span className="text-base font-medium text-gray-700">
+                                Show gravitational force (F<sub>g</sub>)
+                            </span>
+                        </label>
+                    </div>
+                </div>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<NormalForceAnimation />);
+    </script>
+</body>
+</html>
